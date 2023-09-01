@@ -27,9 +27,9 @@ def switch(qty):
     if qty == 25:
         return 8
     elif qty == 50:
-        return 4
+        return 6
     elif qty == 75:
-        return 3
+        return 4
     
 # compress_image(img_data, quality=50): Fungsi ini mengompresi gambar dengan kualitas yang diberikan (default = 50). Prosesnya adalah sebagai berikut:
 # a. Memuat gambar dari data bytes menggunakan PIL dan mengonversinya ke mode RGB.
