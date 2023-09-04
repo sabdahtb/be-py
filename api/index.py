@@ -43,17 +43,22 @@ def switch(qty):
 
 # Fungsi untuk mengompresi gambar dengan kualitas yang diberikan
 def compress_image(img_data, quality=50):
-    img = Image.open(io.BytesIO(img_data)).convert("RGB")
-    img_array = np.array(img, dtype=np.float32)
-    block_size = switch(qty=quality)
-    padded_img_array = pad_image(img_array, block_size)
+    # Pre Processing
+    pre_processing = Image.open(io.BytesIO(img_data)).convert("RGB")
+
+    # Pembagian citra menjadi block block
+    image_block = np.array(pre_processing, dtype=np.float32)
+    
+    # Pengurangan nilai rata rata
+    nilai_rata_rata = switch(qty=quality)
+    padded_img_array = pad_image(image_block, nilai_rata_rata)
     height, width, channels = padded_img_array.shape
     compressed_img = np.zeros((height, width, channels), dtype=np.float32)
 
-    # Memisahkan gambar menjadi blok-blok berukuran block_size x block_size
-    for y in range(0, height, block_size):
-        for x in range(0, width, block_size):
-            block = padded_img_array[y:y+block_size, x:x+block_size, :]
+    # Transformasi Discrete Cosine
+    for y in range(0, height, nilai_rata_rata):
+        for x in range(0, width, nilai_rata_rata):
+            block = padded_img_array[y:y+nilai_rata_rata, x:x+nilai_rata_rata, :]
 
             # Melakukan transformasi DCT pada setiap blok
             dct_block = np.fft.fft2(block, axes=(0, 1), norm="ortho")
@@ -62,23 +67,23 @@ def compress_image(img_data, quality=50):
             quantized_block = quantize(dct_block, quality=50)
 
             # Menyimpan bagian real hasil kuantisasi ke dalam gambar terkompresi
-            compressed_img[y:y+block_size, x:x+block_size, :] = quantized_block.real
+            compressed_img[y:y+nilai_rata_rata, x:x+nilai_rata_rata, :] = quantized_block.real
 
-    # Melakukan transformasi IDCT pada gambar terkompresi
+    # Kuantisasi Invers
     decompressed_img = np.zeros((height, width, channels), dtype=np.float32)
 
-    for y in range(0, height, block_size):
-        for x in range(0, width, block_size):
-            quantized_block = compressed_img[y:y+block_size, x:x+block_size, :]
+    for y in range(0, height, nilai_rata_rata):
+        for x in range(0, width, nilai_rata_rata):
+            quantized_block = compressed_img[y:y+nilai_rata_rata, x:x+nilai_rata_rata, :]
 
             # Melakukan transformasi IDCT pada setiap blok terkompresi
             idct_block = np.fft.ifft2(quantized_block, axes=(0, 1), norm="ortho").real
-            decompressed_img[y:y+block_size, x:x+block_size, :] = idct_block
+            decompressed_img[y:y+nilai_rata_rata, x:x+nilai_rata_rata, :] = idct_block
 
-    # Membatasi nilai-nilai piksel hasil dekompresi ke dalam rentang valid (0-255)
+    # Rekonstruksi gambar
     decompressed_img = np.clip(decompressed_img, 0, 255)
 
-    # Mengonversi gambar hasil kompresi ke dalam format base64
+    # Encoding
     compressed_img = Image.fromarray(decompressed_img.astype(np.uint8))
     img_bytes = io.BytesIO()
     compressed_img.save(img_bytes, format="JPEG")
